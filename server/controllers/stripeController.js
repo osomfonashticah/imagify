@@ -35,17 +35,17 @@ export const stripePayment = async (req, res) => {
         return res.json({ success: false, message: "Invalid Plan" });
     }
 
-    date = Date.now();
+    //date = Date.now();
 
-    const transactionData = {
-      userId,
-      plan,
-      credits,
-      amount,
-      date,
-    };
+    // const transactionData = {
+    //   userId,
+    //   plan,
+    //   credits,
+    //   amount,
+    //   date,
+    // };
 
-    const newTransaction = await transactionModel.create(transactionData);
+    // const newTransaction = await transactionModel.create(transactionData);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -84,42 +84,79 @@ export const verifyPayment = async (req, res) => {
   const sig = req.headers["stripe-signature"];
 
   let event;
-
   try {
-    event = stripe.webhooks.constructEvent(
-      req.body, // This must be raw body
+    event = stripeInstance.webhooks.constructEvent(
+      req.body, // Must be raw body
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    console.error(err.message);
+    console.error("❌ Webhook signature verification failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    const userId = session.metadata.userId;
-    const credits = Number(session.metadata.credits);
-    const plan = session.metadata.plan;
+    const userId = session.metadata?.userId;
+    const credits = Number(session.metadata?.credits);
+    const plan = session.metadata?.plan;
+    const amount = session.amount_total / 100; // Convert cents to dollars
+    const sessionId = session.id; // Unique session ID from Stripe
+
+    if (!userId || isNaN(credits)) {
+      console.error("❌ Invalid session metadata:", session.metadata);
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid metadata" });
+    }
 
     try {
-      // Update user's credit balance
-      await User.findByIdAndUpdate(userId, {
-        $inc: { creditBalance: credits },
-      });
+      // 1️⃣ Check if a transaction for this session already exists
+      let existingTransaction = await transactionModel.findOne({ sessionId });
 
-      // Save transaction only after successful payment
+      if (existingTransaction) {
+        if (existingTransaction.payment === false) {
+          // If payment was false, update it to true instead of inserting a new record
+          existingTransaction.payment = true;
+          await existingTransaction.save();
+
+          // 2️⃣ Only now, update user's credit balance
+          await User.findByIdAndUpdate(userId, {
+            $inc: { creditBalance: credits },
+          });
+
+          console.log(
+            `✅ Payment confirmed! ${credits} credits added for user ${userId}`
+          );
+        } else {
+          console.log(
+            `⚠️ Duplicate transaction ignored for session ${sessionId}`
+          );
+        }
+
+        return res
+          .status(200)
+          .json({ success: true, message: "Transaction updated" });
+      }
+
+      // 3️⃣ If no transaction exists, create a new one and mark it as paid
       await transactionModel.create({
         userId,
         plan,
         credits,
-        amount: session.amount_total / 100, // Convert cents to dollars
-        payment: true,
+        amount,
+        payment: true, // Payment confirmed
+        sessionId, // Prevent duplicates
         date: new Date(),
       });
 
+      // 4️⃣ Now, update user's credits
+      await User.findByIdAndUpdate(userId, {
+        $inc: { creditBalance: credits },
+      });
+
       console.log(
-        `✅ Payment successful! ${credits} credits added to user ${userId}`
+        `✅ Payment successful! ${credits} credits added for user ${userId}`
       );
     } catch (dbError) {
       console.error("❌ Database update error:", dbError);
@@ -129,7 +166,5 @@ export const verifyPayment = async (req, res) => {
     }
   }
 
-  res.json({
-    received: true,
-  });
+  res.json({ received: true });
 };

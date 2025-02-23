@@ -21,16 +21,28 @@ export const generateImage = async (req, res) => {
       });
     }
 
-    const image = await generateImage1(prompt);
+    let image;
+    try {
+      image = await generateImage1(prompt);
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Image generation failed",
+        error: error.message,
+      });
+    }
 
-    await User.findByIdAndUpdate(user._id, {
-      creditBalance: user.creditBalance - 1,
-    });
+    // Deduct 1 credit safely
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      { $inc: { creditBalance: -1 } }, // Atomically decrement creditBalance
+      { new: true } // Return updated document
+    );
 
     res.status(200).json({
       success: true,
       message: "Image Generated",
-      creditBalance: user.creditBalance - 1,
+      creditBalance: updatedUser.creditBalance,
       image,
     });
   } catch (error) {
