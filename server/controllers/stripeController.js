@@ -1,5 +1,5 @@
 import transactionModel from "../models/TransactionModel.js";
-import UserModel from "../models/userModel.js";
+import User from "../models/User.js";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -7,7 +7,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 export const stripePayment = async (req, res) => {
   try {
     const { userId, planId } = req.body;
-    const user = await UserModel.findById(userId);
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.json({ success: false, message: "User not found" });
@@ -104,7 +104,7 @@ export const verifyPayment = async (req, res) => {
 
     try {
       // Update user's credit balance
-      await UserModel.findByIdAndUpdate(userId, {
+      await User.findByIdAndUpdate(userId, {
         $inc: { creditBalance: credits },
       });
 

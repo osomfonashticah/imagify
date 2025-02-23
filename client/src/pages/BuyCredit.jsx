@@ -3,7 +3,6 @@ import { useContext } from "react";
 import { assets, plans } from "../assets/assets";
 import { AppContext } from "../context/AppContext";
 import { motion } from "motion/react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
 
@@ -11,10 +10,7 @@ const BuyCredit = () => {
   const stripePromise = loadStripe(
     "pk_test_51Ln8TVCu4v08hYau4iclKLruIhiOzMKqhk5pIDfWE8siuZLLkx3W3jKB5hlASnJuZaVsfoNepVDy90pgwfNJulxx00BTe0XGnc"
   );
-  const { user, backendUrl, loadCreditData, token, setShowLogin } =
-    useContext(AppContext);
-
-  const navigate = useNavigate();
+  const { user, backendUrl, token, setShowLogin } = useContext(AppContext);
 
   const paymentStripe = async (planId) => {
     try {

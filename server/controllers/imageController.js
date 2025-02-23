@@ -1,11 +1,11 @@
-import UserModel from "../models/UserModel.js";
+import User from "../models/User.js";
 import { generateImage1 } from "../utils/generateChatgptImage.js";
 
 export const generateImage = async (req, res) => {
   try {
     const { userId, prompt } = req.body;
 
-    const user = await UserModel.findById(userId);
+    const user = await User.findById(userId);
 
     if (!user || !prompt) {
       return res
@@ -23,7 +23,7 @@ export const generateImage = async (req, res) => {
 
     const image = await generateImage1(prompt);
 
-    await UserModel.findByIdAndUpdate(user._id, {
+    await User.findByIdAndUpdate(user._id, {
       creditBalance: user.creditBalance - 1,
     });
 

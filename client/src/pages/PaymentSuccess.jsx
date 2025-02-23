@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
@@ -7,6 +8,10 @@ const PaymentSuccess = () => {
   useEffect(() => {
     setTimeout(() => {
       navigate("/"); // Redirect to dashboard after payment
+    }, 3000);
+
+    setTimeout(() => {
+      toast.success("credits added");
     }, 3000);
   }, []);
 

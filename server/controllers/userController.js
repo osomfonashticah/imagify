@@ -1,4 +1,4 @@
-import UserModel from "../models/UserModel.js";
+import User from "../models/User.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
@@ -21,7 +21,7 @@ export const registerUser = async (req, res) => {
       password: hashedPassword,
     };
 
-    const newUser = new UserModel(userData);
+    const newUser = new User(userData);
     const user = await newUser.save();
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
@@ -46,12 +46,10 @@ export const loginUser = async (req, res) => {
         .json({ success: false, message: "Please provide all fields" });
     }
 
-    const user = await UserModel.findOne({ email });
+    const user = await User.findOne({ email });
 
     if (!user) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid credentials" });
+      return res.json({ success: false, message: "Invalid credentials" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -78,7 +76,7 @@ export const userCredits = async (req, res) => {
   try {
     const { userId } = req.body;
 
-    const user = await UserModel.findById(userId);
+    const user = await User.findById(userId);
     res.status(200).json({
       success: true,
       credits: user.creditBalance,
