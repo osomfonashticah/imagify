@@ -82,6 +82,7 @@ export const stripePayment = async (req, res) => {
 
 export const verifyPayment = async (req, res) => {
   const sig = req.headers["stripe-signature"];
+
   let event;
 
   try {
@@ -91,7 +92,7 @@ export const verifyPayment = async (req, res) => {
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    console.error("⚠️ Webhook signature verification failed.");
+    console.error(err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -113,6 +114,7 @@ export const verifyPayment = async (req, res) => {
         plan,
         credits,
         amount: session.amount_total / 100, // Convert cents to dollars
+        payment: true,
         date: new Date(),
       });
 
@@ -127,5 +129,7 @@ export const verifyPayment = async (req, res) => {
     }
   }
 
-  res.json({ received: true });
+  res.json({
+    received: true,
+  });
 };
